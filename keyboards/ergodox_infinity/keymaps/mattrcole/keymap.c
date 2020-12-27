@@ -18,21 +18,21 @@ enum custom_keycodes {
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /* Keymap 0: Windows layer
  *
- * ,--------------------------------------------------.           ,--------------------------------------------------.
- * |   N/A  |   1  |   2  |   3  |   4  |   5  |   6  |           |   7  |   8  |   9  |   0  |   -  |   =  |  N/A   |
- * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
- * |   N/A  |   Q  |   W  |   E  |   R  |   T  | Media|           |LG+<- |   Y  |   U  |   I  |   O  |   P  |   \    |
- * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * | ~      |   A  |   S  |   D  |   F  |   G  |------|           |------|   H  |   J  |   K  |   L  |   ;  |    '   |
- * |--------+------+------+------+------+------|  FN  |           |LG+-> |------+------+------+------+------+--------|
- * | LShift |   Z  |   X  |   C  |   V  |   B  |      |           |      |   N  |   M  |   ,  |   .  |   /  |   N/A  |
- * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
- *   | LCtl |  LG  | LAlt |  N/A | N/A  |                                       |  [   |  ]   |LCtl+.|  N/A |   N/A  |
- *   `----------------------------------'                                       `------------------------------------'
+ * ,--------------------------------------------------.           ,---------------------------------------------------.
+ * |   N/A  |   1  |   2  |   3   |   4   |   5  |   6  |           |   7  |   8  |   9  |   0  |   -  |   =   |  N/A   |
+ * |--------+------+------+-------+-------+-------------|           |------+------+------+------+------+-------+--------|
+ * |   N/A  |   Q  |   W  |   E   |   R   |   T  | Media|           |LG+<- |   Y  |   U  |   I  |   O  |   P   |   \    |
+ * |--------+------+------+-------+-------+------|      |           |      |------+------+------+------+-------+--------|
+ * | ~      |   A  |   S  |   D   |   F   |   G  |------|           |------|   H  |   J  |   K  |   L  |   ;   |    '   |
+ * |--------+------+------+-------+-------+------|  FN  |           |LG+-> |------+------+------+------+-------+--------|
+ * | LShift |   Z  |   X  |   C   |   V   |   B  |      |           |      |   N  |   M  |   ,  |   .  |   /   |   N/A  |
+ * `--------+------+------+-------+-------+-------------'           `-------------+------+------+------+-------+--------'
+ *   | LCtl |  LG  | LAlt |LALT+<-|LALT+->|                                       |  [   |  ]   |LCtl+.|LALT+<-|LALT+-> |
+ *   `------------------------------------'                                       `-------------------------------------'
  *                                        ,-------------.       ,-------------.
- *                                        |LCtl+C|LCtl+X|       | Home |  End   |
+ *                                        | Copy | Cut  |       | Home |  End   |
  *                                 ,------|------|------|       |------+--------+------.
- *                                 |      |      |LCtl+P|       |Insert|        |      |
+ *                                 |      |      | Paste|       |Insert|        |      |
  *                                 | BkSp |  Tab |------|       |------|  Enter |Space |
  *                                 |      |      |  Esc |       |Delete|        |      |
  *                                 `--------------------'       `----------------------'
@@ -41,41 +41,41 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // Otherwise, it needs KC_*
 [WIN_LAYOUT] = LAYOUT_ergodox(  // layer 0 : windows layout
         // left hand
-        KC_NO,          KC_1,         KC_2,    KC_3,   KC_4,   KC_5,   KC_6,
-        KC_NO,          KC_Q,         KC_W,    KC_E,   KC_R,   KC_T,   KC_NO,//MO(FN_LAYER),
-        KC_GRV,         KC_A,         KC_S,    KC_D,   KC_F,   KC_G,
-        KC_LSFT,        KC_Z,         KC_X,    KC_C,   KC_V,   KC_B,   MO(FN_LAYER),
-        KC_LCTL,        KC_LGUI,      KC_LALT, KC_NO,  KC_NO,
-                                              LCTL(KC_C), LCTL(KC_X),
-                                                          LCTL(KC_V),
-                                     KC_BSPC, KC_TAB,     KC_ESC,
+        KC_TRNS, KC_1,    KC_2,    KC_3,          KC_4,          KC_5,       KC_6,
+        KC_TRNS, KC_Q,    KC_W,    KC_E,          KC_R,          KC_T,       KC_TRNS,//MO(FN_LAYER),
+        KC_GRV,  KC_A,    KC_S,    KC_D,          KC_F,          KC_G,
+        KC_LSFT, KC_Z,    KC_X,    KC_C,          KC_V,          KC_B,       MO(FN_LAYER),
+        KC_LCTL, KC_LGUI, KC_LALT, LALT(KC_LEFT), LALT(KC_RGHT),
+                                                                 LCTL(KC_C), LCTL(KC_X),
+                                                                             LCTL(KC_V),
+                                                        KC_BSPC,     KC_TAB, KC_ESC,
         // right hand
-             KC_7,          KC_8,   KC_9,    KC_0,    KC_MINS,      KC_EQL,  KC_NO,
-             LGUI(KC_LEFT), KC_Y,   KC_U,    KC_I,    KC_O,         KC_P,    KC_BSLS,
-                            KC_H,   KC_J,    KC_K,    KC_L,         KC_SCLN, KC_QUOT,
-             LGUI(KC_RGHT), KC_N,   KC_M,    KC_COMM, KC_DOT,       KC_SLSH, KC_NO,
-                                    KC_LBRC, KC_RBRC, LCTL(KC_DOT), KC_NO,   KC_NO,
+             KC_7,          KC_8,   KC_9,    KC_0,    KC_MINS,      KC_EQL,        KC_TRNS,
+             LGUI(KC_LEFT), KC_Y,   KC_U,    KC_I,    KC_O,         KC_P,          KC_BSLS,
+                            KC_H,   KC_J,    KC_K,    KC_L,         KC_SCLN,       KC_QUOT,
+             LGUI(KC_RGHT), KC_N,   KC_M,    KC_COMM, KC_DOT,       KC_SLSH,       KC_TRNS,
+                                    KC_LBRC, KC_RBRC, LCTL(KC_DOT), LALT(KC_LEFT), LALT(KC_RGHT),
              KC_LALT, KC_END,
              KC_INS,
              KC_DEL,  KC_ENT, KC_SPC
     ),
 /* Keymap 1: Mac Layer
  *
- * ,---------------------------------------------------.           ,--------------------------------------------------.
- * |         |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
- * |---------+------+------+------+------+------+------|           |------+------+------+------+------+------+--------|
- * |         |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
- * |---------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |         |      |      |      |      |      |------|           |------|      |      |      |      |      |        |
- * |---------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |         |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
- * `---------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
- *   | LCTRL | LALT | LGUI |      |      |                                       |      |      |      |      |      |
- *   `-----------------------------------'                                       `----------------------------------'
+ * ,-----------------------------------------------------.           ,---------------------------------------------------.
+ * |         |      |      |       |       |      |      |           |      |      |      |      |      |       |        |
+ * |---------+------+------+-------+-------+------+------|           |------+------+------+------+------+-------+--------|
+ * |         |      |      |       |       |      |      |           |      |      |      |      |      |       |        |
+ * |---------+------+------+-------+-------+------|      |           |      |------+------+------+------+-------+--------|
+ * |         |      |      |       |       |      |------|           |------|      |      |      |      |       |        |
+ * |---------+------+------+-------+-------+------|      |           |      |------+------+------+------+-------+--------|
+ * |         |      |      |       |       |      |      |           |      |      |      |      |      |       |        |
+ * `---------+------+------+-------+-------+-------------'           `-------------+------+------+------+-------+--------'
+ *   | LCTL  | LALT | LGUI |LCTL+<-|LCTL+->|                                       |      |      |LGUI+.|LCTL+<-|LCTL+->|
+ *   `-------------------------------------'                                       `------------------------------------'
  *                                        ,-------------.       ,-------------.
- *                                        |      |      |       |      |      |
+ *                                        | Copy | Cut  |       |      |      |
  *                                 ,------|------|------|       |------+------+------.
- *                                 |      |      |      |       |      |      |      |
+ *                                 |      |      | Paste|       |      |      |      |
  *                                 |      |      |------|       |------|      |      |
  *                                 |      |      |      |       |      |      |      |
  *                                 `--------------------'       `--------------------'
@@ -83,20 +83,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // MAC LAYOUT
 [MAC_LAYOUT] = LAYOUT_ergodox(
        // left hand
-       KC_TRNS,   KC_TRNS,  KC_TRNS,  KC_TRNS,  KC_TRNS,  KC_TRNS,  KC_TRNS,
-       KC_TRNS, KC_TRNS,KC_TRNS,  KC_TRNS,KC_TRNS,KC_TRNS,KC_TRNS,
-       KC_TRNS, KC_TRNS,KC_TRNS, KC_TRNS,KC_TRNS,KC_TRNS,
-       KC_TRNS, KC_TRNS,KC_TRNS,KC_TRNS,KC_TRNS,KC_TRNS,KC_TRNS,
-       KC_LCTL, KC_LALT,KC_LGUI,KC_TRNS,KC_TRNS,
-                                       LGUI(KC_C),LGUI(KC_X),
-                                               LGUI(KC_V),
-                               KC_TRNS,KC_TRNS,KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,       KC_TRNS,       KC_TRNS,    KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,       KC_TRNS,       KC_TRNS,    KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,       KC_TRNS,       KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,       KC_TRNS,       KC_TRNS,    KC_TRNS,
+       KC_LCTL, KC_LALT, KC_LGUI, LCTL(KC_LEFT), LCTL(KC_RGHT),
+                                                                LGUI(KC_C), LGUI(KC_X),
+                                                                            LGUI(KC_V),
+                                                       KC_TRNS, KC_TRNS,    KC_TRNS,
        // right hand
-       KC_TRNS, KC_TRNS,   KC_TRNS,  KC_TRNS,   KC_TRNS,   KC_TRNS,  KC_TRNS,
-       KC_TRNS, KC_TRNS,   KC_TRNS,   KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,
-                KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,
-       KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,
-                         KC_TRNS,KC_TRNS,  LGUI(KC_DOT),    KC_TRNS,  KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,      KC_TRNS,       KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,      KC_TRNS,       KC_TRNS,
+                KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,      KC_TRNS,       KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,      KC_TRNS,       KC_TRNS,
+                         KC_TRNS, KC_TRNS, LGUI(KC_DOT), LCTL(KC_LEFT), LCTL(KC_RGHT),
        KC_TRNS, KC_TRNS,
        KC_TRNS,
        KC_TRNS, KC_TRNS, KC_TRNS
@@ -112,7 +112,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
  * |  LCTRL |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
  * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
- *   | LALT | N/A  | N/A  |      |      |                                       |      |      |      |      |      |
+ *   | LALT | N/A  | N/A  | N/A  | N/A  |                                       |      |      |      |      |      |
  *   `----------------------------------'                                       `----------------------------------'
  *                                        ,-------------.       ,-------------.
  *                                        |      |      |       |      |      |
@@ -128,16 +128,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
        KC_TAB,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
        KC_LSFT, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
        KC_LCTL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-       KC_LALT, KC_NO,   KC_NO,   KC_TRNS, KC_TRNS,
-                                           KC_TRNS, KC_TRNS,
-                                                    KC_TRNS,
-                                  KC_SPC,  KC_ENT,  KC_TRNS,
+       KC_LALT, KC_NO,   KC_NO,   KC_NO,   KC_NO,
+                                                    KC_TRNS, KC_TRNS,
+                                                             KC_TRNS,
+                                           KC_SPC,  KC_ENT,  KC_TRNS,
     // right hand
-       KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-       KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-                 KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-       KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-                          KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+                KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+                         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
        KC_TRNS, KC_TRNS,
        KC_TRNS,
        KC_TRNS, KC_TRNS, KC_TRNS
@@ -145,15 +145,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /* Keymap 3: Call of Duty Layout
  *
  * ,--------------------------------------------------.           ,--------------------------------------------------.
- * |        |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
+ * |  ESC   |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
- * |        |  M   |  Q   |  W   |  E   |  R   |      |           |      |      |      |      |      |      |        |
+ * |  TAB   |  M   |  Q   |  W   |  E   |  R   |      |           |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |        | LSFT |  A   |  S   |  D   |  F   |------|           |------|      |      |      |      |      |        |
+ * |  LSFT  | LSFT |  A   |  S   |  D   |  F   |------|           |------|      |      |      |      |      |        |
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |        |      |  Z   | LCTL |  X   |      |      |           |      |      |      |      |      |      |        |
+ * |  LCTL  |      |  Z   | LCTL |  X   |      |      |           |      |      |      |      |      |      |        |
  * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
- *   |      |      |      |      |      |                                       |      |      |      |      |      |
+ *   | LALT |  N/A |  N/A |  N/A |  N/A |                                       |      |      |      |      |      |
  *   `----------------------------------'                                       `----------------------------------'
  *                                        ,-------------.       ,-------------.
  *                                        |  N/A |  M   |       |      |      |
@@ -165,14 +165,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
 // Call of Duty Layout
 [COD_LAYOUT] = LAYOUT_ergodox(
-       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-       KC_TRNS, KC_M,    KC_Q,    KC_W,    KC_E,    KC_R,    KC_TRNS,
-       KC_TRNS, KC_LSFT, KC_A,    KC_S,    KC_D,    KC_F,
-       KC_TRNS, KC_TRNS, KC_Z,    KC_LCTL, KC_X,    KC_TRNS, KC_TRNS,
-       KC_TRNS, KC_NO,   KC_NO,   KC_TRNS, KC_TRNS,
-                                           KC_NO, KC_M,
-                                                  KC_NO,
-                                   KC_SPC, KC_C,  KC_LALT,
+       KC_ESC,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TAB,  KC_M,    KC_Q,    KC_W,    KC_E,    KC_R,    KC_TRNS,
+       KC_LSFT, KC_LSFT, KC_A,    KC_S,    KC_D,    KC_F,
+       KC_LCTL, KC_TRNS, KC_Z,    KC_LCTL, KC_X,    KC_TRNS, KC_TRNS,
+       KC_LALT, KC_NO,   KC_NO,   KC_NO,   KC_NO,
+                                                    KC_NO,   KC_M,
+                                                             KC_NO,
+                                           KC_SPC,  KC_C,    KC_LALT,
     // right hand
        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
@@ -186,15 +186,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /* Keymap 4: Fn Layer
  *
  * ,--------------------------------------------------.           ,--------------------------------------------------.
- * |        |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
+ * |        |  F1  |  F2  |  F3  |  F4  |  F5  |      |           |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+-------------|           |------+------+------+------+------+------+--------|
- * |        |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
+ * |        |  F6  |  F7  |  F8  |  F9  |  F10 |      |           |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |        |      |      |      |      |      |------|           |------|  <-  |  v   |  ^   |  ->  |      |        |
+ * |        |  F11 |  F12 |      |      |      |------|           |------|  <-  |  v   |  ^   |  ->  |      |        |
  * |--------+------+------+------+------+------|      |           |      |------+------+------+------+------+--------|
- * |  LSFT  |      |      |      |      |      |      |           |      |      |      |      |      |      |        |
+ * |        |      |      |      |      |      |  N/A |           |      |      |      |      |      |      |        |
  * `--------+------+------+------+------+-------------'           `-------------+------+------+------+------+--------'
- *   | LCTL |      |      |      |      |                                       |      |      |      |      |      |
+ *   |      |      |      |      |      |                                       |      |      |      |      |      |
  *   `----------------------------------'                                       `----------------------------------'
  *                                        ,-------------.       ,-------------.
  *                                        |      |      |       |      |      |
@@ -206,23 +206,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
 // Layer Switching Help Layer
 [FN_LAYER] = LAYOUT_ergodox(
-       KC_NO,   KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_NO,   KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_NO,   KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_LSFT, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_LCTL, KC_NO, KC_NO, KC_NO, KC_NO,
-                                                             KC_NO, KC_NO,
-                                                                    TO(COD_LAYOUT),
-                                    TO(WIN_LAYOUT), TO(MAC_LAYOUT), TO(GAM_LAYOUT),
+       KC_TRNS, KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_TRNS,
+       KC_TRNS, KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_TRNS,
+       KC_TRNS, KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+                                                    KC_TRNS, KC_TRNS,
+                                                             TO(COD_LAYOUT),
+                             TO(WIN_LAYOUT), TO(MAC_LAYOUT), TO(GAM_LAYOUT),
     // right hand
-       KC_NO,  KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_NO,  KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-               KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_NO, KC_NO,
-       KC_NO,  KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-                      KC_NO, KC_NO, KC_NO, KC_NO, KC_NO,
-       KC_NO, KC_NO,
-       KC_NO,
-       KC_NO, KC_NO, KC_NO
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+                KC_LEFT, KC_DOWN, KC_UP,   KC_RGHT, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+                         KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+       KC_TRNS, KC_TRNS,
+       KC_TRNS,
+       KC_TRNS, KC_TRNS, KC_TRNS
 ),
 };
 
