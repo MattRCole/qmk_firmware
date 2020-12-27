@@ -1,17 +1,17 @@
 # The MIT License (MIT)
-# 
+#
 # Copyright (c) 2016 Fred Sundvik
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
 # in the Software without restriction, including without limitation the rights
 # to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be included in all
 # copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -66,6 +66,8 @@ ifeq ($(strip $(LCD_ENABLE)), yes)
     endif
 # Note, that the linker will strip out any resources that are not actually in use
 SRC += $(VISUALIZER_DIR)/resources/lcd_logo.c
+SRC += $(VISUALIZER_DIR)/resources/win_layer.c
+SRC += $(VISUALIZER_DIR)/resources/mac_layer.c
 $(eval $(call ADD_DRIVER,LCD))
 endif
 
@@ -94,7 +96,7 @@ GFXDEFS +=-DGDISP_DRIVER_LIST="$(GDISP_DRIVER_LIST)"
 
 ifneq ("$(wildcard $(KEYMAP_PATH)/visualizer.c)","")
     SRC += $(KEYMAP_PATH)/visualizer.c
-else 
+else
     VISUALIZER_1 := $(KEYBOARD_PATH_1)/visualizer.c
     VISUALIZER_2 := $(KEYBOARD_PATH_2)/visualizer.c
     VISUALIZER_3 := $(KEYBOARD_PATH_3)/visualizer.c

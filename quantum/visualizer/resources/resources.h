@@ -21,6 +21,8 @@
 
 #ifdef LCD_ENABLE
 extern const uint8_t resource_lcd_logo[];
+extern const uint8_t resource_mac_layer[];
+extern const uint8_t resource_win_layer[];
 #endif
 
 #endif /* QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_ */
