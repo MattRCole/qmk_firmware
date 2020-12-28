@@ -68,6 +68,11 @@ ifeq ($(strip $(LCD_ENABLE)), yes)
 SRC += $(VISUALIZER_DIR)/resources/lcd_logo.c
 SRC += $(VISUALIZER_DIR)/resources/win_layer.c
 SRC += $(VISUALIZER_DIR)/resources/mac_layer.c
+SRC += $(VISUALIZER_DIR)/resources/logo_mac.c
+SRC += $(VISUALIZER_DIR)/resources/macOs.c
+SRC += $(VISUALIZER_DIR)/resources/keyboard.c
+SRC += $(VISUALIZER_DIR)/resources/mode.c
+
 $(eval $(call ADD_DRIVER,LCD))
 endif
 

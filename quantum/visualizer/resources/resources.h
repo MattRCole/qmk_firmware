@@ -23,6 +23,12 @@
 extern const uint8_t resource_lcd_logo[];
 extern const uint8_t resource_mac_layer[];
 extern const uint8_t resource_win_layer[];
+extern const uint8_t resource_keyboard[];
+extern const uint8_t resource_logo_mac[];
+extern const uint8_t resource_logo_win[];
+extern const uint8_t resource_macOs[];
+extern const uint8_t resource_mode[];
+extern const uint8_t resource_windows[];
 #endif
 
 #endif /* QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_ */
