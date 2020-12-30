@@ -22,5 +22,10 @@
     "[markdown]": {
         "editor.trimAutoWhitespace": false,
         "files.trimTrailingWhitespace": false
-    }
+    },
+    "C_Cpp.errorSquiggles": "Enabled",
+    "cSpell.words": [
+      "Blit",
+      "GDISP"
+    ]
 }

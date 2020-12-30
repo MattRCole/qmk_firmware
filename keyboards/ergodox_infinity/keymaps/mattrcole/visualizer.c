@@ -35,6 +35,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "system/serial_link.h"
 #include "default_animations.h"
 #include "util.h"
+#include "layers.h"
+#include "animation-keyframes.h"
 
 static bool first_state_update = true;
 
@@ -47,14 +49,14 @@ static keyframe_animation_t color_animation = {
     .frame_functions = {keyframe_no_operation, lcd_backlight_keyframe_animate_color},
 };
 
-static bool keyframe_fade_in(keyframe_animation_t* animation, visualizer_state_t* state) {
+/* static bool keyframe_fade_in(keyframe_animation_t* animation, visualizer_state_t* state) {
     bool ret = false;
     ret = ret || lcd_backlight_keyframe_animate_color(animation, state);
     ret = ret || led_backlight_keyframe_fade_in_all(animation, state);
     return ret;
-}
+} */
 
-bool lcd_keyframe_draw_mac_layer_pic(keyframe_animation_t* animation, visualizer_state_t* state) {
+/* bool lcd_keyframe_draw_mac_layer_pic(keyframe_animation_t* animation, visualizer_state_t* state) {
     (void)state;
     (void)animation;
 
@@ -62,9 +64,9 @@ bool lcd_keyframe_draw_mac_layer_pic(keyframe_animation_t* animation, visualizer
     gdispGBlitArea(GDISP, 0, 0, 128, 32, 0, 0, LCD_WIDTH, (pixel_t*)resource_mac_layer);
 
     return false;
-}
+} */
 
-static keyframe_animation_t mac_layer_animation = {
+/* static keyframe_animation_t mac_layer_animation = {
     .num_frames = 1,
     .loop = false,
     .frame_lengths = {
@@ -75,9 +77,9 @@ static keyframe_animation_t mac_layer_animation = {
         lcd_keyframe_draw_mac_layer_pic,
         keyframe_fade_in
     },
-};
+}; */
 
-bool lcd_keyframe_draw_win_layer_pic(keyframe_animation_t* animation, visualizer_state_t* state) {
+/* bool lcd_keyframe_draw_win_layer_pic(keyframe_animation_t* animation, visualizer_state_t* state) {
     (void)state;
     (void)animation;
     gdispClear(Black);
@@ -85,14 +87,14 @@ bool lcd_keyframe_draw_win_layer_pic(keyframe_animation_t* animation, visualizer
     gdispGBlitArea(GDISP, 0, 0, 128, 32, 0, 0, LCD_WIDTH, (pixel_t*)resource_win_layer);
 
     return false;
-}
+} */
 
-static keyframe_animation_t win_layer_animation = {
-    .num_frames = 1,
-    .loop = false,
-    .frame_lengths = {gfxMillisecondsToTicks(0)},
-    .frame_functions = {lcd_keyframe_draw_win_layer_pic},
-};
+// static keyframe_animation_t win_layer_animation = {
+//     .num_frames = 1,
+//     .loop = false,
+//     .frame_lengths = {gfxMillisecondsToTicks(0)},
+//     .frame_functions = {lcd_keyframe_draw_win_layer_pic},
+// };
 
 static const uint32_t logo_background_color = LCD_COLOR(0x00, 0x00, 0xFF);
 static const uint32_t initial_color = LCD_COLOR(0, 0, 0);
@@ -138,13 +140,8 @@ static inline bool is_led_on(visualizer_user_data_t* user_data, uint8_t num) {
     return user_data->led_on & (1u << num);
 }
 
-enum ergodox_layers {
-  WIN_LAYOUT,
-  MAC_LAYOUT,
-  GAM_LAYOUT,
-  COD_LAYOUT,
-  FN_LAYER
-};
+void initialize_my_animation_handler(void);
+void update_my_animation_handler(Layers);
 
 void update_user_visualizer_state(visualizer_state_t* state, visualizer_keyboard_status_t* prev_status) {
     // const uint8_t OrangeYellow = 30;
@@ -166,16 +163,18 @@ void update_user_visualizer_state(visualizer_state_t* state, visualizer_keyboard
 
     if (layer == previous_layer && !first_state_update) return;
 
-    first_state_update = false;
+    if (first_state_update) {
+        first_state_update = false;
+        initialize_my_animation_handler();
+    }
+    else update_my_animation_handler((Layers)layer);
 
     switch(layer) {
         case WIN_LAYOUT:
             state->target_lcd_color = LCD_COLOR(_Blue, saturation, 0xFF);
-            start_keyframe_animation(&win_layer_animation);
             break;
         case MAC_LAYOUT:
             state->target_lcd_color = LCD_COLOR(_Lime, saturation, 0xFF);
-            start_keyframe_animation(&mac_layer_animation);
             break;
         case GAM_LAYOUT:
             state->target_lcd_color = LCD_COLOR(_Red, saturation, 0xFF);

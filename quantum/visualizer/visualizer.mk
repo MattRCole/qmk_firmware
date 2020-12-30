@@ -125,6 +125,8 @@ else
     endif
 endif
 
+SRC += $(KEYMAP_PATH)/animation-keyframes.c
+
 ifdef EMULATOR
 UINCDIR += $(TMK_DIR)/common
 endif
