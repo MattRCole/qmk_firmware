@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #error This visualizer needs that LCD is enabled
 #endif
 
+#include "print.h"
+
 #include "resources/resources.h"
 #include "visualizer.h"
 #include "visualizer_keyframes.h"
@@ -129,6 +131,7 @@ _Static_assert(sizeof(visualizer_user_data_t) <= VISUALIZER_USER_DATA_SIZE,
 void initialize_user_visualizer(visualizer_state_t* state) {
     // The brightness will be dynamically adjustable in the future
     // But for now, change it here.
+    uprintf("Max frames: %d", MAX_VISUALIZER_KEY_FRAMES);
     lcd_backlight_brightness(130);
     state->current_lcd_color = initial_color;
     state->target_lcd_color = logo_background_color;
@@ -164,6 +167,7 @@ void update_user_visualizer_state(visualizer_state_t* state, visualizer_keyboard
     if (layer == previous_layer && !first_state_update) return;
 
     if (first_state_update) {
+        print("Calling initializer");
         first_state_update = false;
         initialize_my_animation_handler();
     }

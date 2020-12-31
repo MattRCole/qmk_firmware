@@ -66,12 +66,18 @@ ifeq ($(strip $(LCD_ENABLE)), yes)
     endif
 # Note, that the linker will strip out any resources that are not actually in use
 SRC += $(VISUALIZER_DIR)/resources/lcd_logo.c
-SRC += $(VISUALIZER_DIR)/resources/win_layer.c
-SRC += $(VISUALIZER_DIR)/resources/mac_layer.c
-SRC += $(VISUALIZER_DIR)/resources/logo_mac.c
-SRC += $(VISUALIZER_DIR)/resources/macOs.c
-SRC += $(VISUALIZER_DIR)/resources/keyboard.c
-SRC += $(VISUALIZER_DIR)/resources/mode.c
+SRC += $(VISUALIZER_DIR)/resources/logo-win.c
+SRC += $(VISUALIZER_DIR)/resources/logo-mac.c
+SRC += $(VISUALIZER_DIR)/resources/logo-cod.c
+SRC += $(VISUALIZER_DIR)/resources/mode-mode.c
+SRC += $(VISUALIZER_DIR)/resources/mode-cod.c
+SRC += $(VISUALIZER_DIR)/resources/mode-fn.c
+SRC += $(VISUALIZER_DIR)/resources/name-win.c
+SRC += $(VISUALIZER_DIR)/resources/name-mac.c
+SRC += $(VISUALIZER_DIR)/resources/name-gam.c
+SRC += $(VISUALIZER_DIR)/resources/name-cod.c
+SRC += $(VISUALIZER_DIR)/resources/symbol-keyboard.c
+SRC += $(VISUALIZER_DIR)/resources/symbol-controller.c
 
 $(eval $(call ADD_DRIVER,LCD))
 endif

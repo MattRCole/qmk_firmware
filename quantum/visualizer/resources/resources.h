@@ -21,14 +21,18 @@
 
 #ifdef LCD_ENABLE
 extern const uint8_t resource_lcd_logo[];
-extern const uint8_t resource_mac_layer[];
-extern const uint8_t resource_win_layer[];
-extern const uint8_t resource_keyboard[];
-extern const uint8_t resource_logo_mac[];
 extern const uint8_t resource_logo_win[];
-extern const uint8_t resource_macOs[];
-extern const uint8_t resource_mode[];
-extern const uint8_t resource_windows[];
+extern const uint8_t resource_logo_mac[];
+extern const uint8_t resource_logo_cod[];
+extern const uint8_t resource_name_win[];
+extern const uint8_t resource_name_mac[];
+extern const uint8_t resource_name_gam[];
+extern const uint8_t resource_name_cod[];
+extern const uint8_t resource_symbol_keyboard[];
+extern const uint8_t resource_symbol_controller[];
+extern const uint8_t resource_mode_mode[];
+extern const uint8_t resource_mode_cod[];
+extern const uint8_t resource_mode_fn[];
 #endif
 
 #endif /* QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_ */

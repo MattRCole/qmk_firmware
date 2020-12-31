@@ -105,6 +105,8 @@
 #include "visualizer.h"
 #include "layers.h"
 
+#include "print.h"
+
 // ENUM START ====================================================================================================================
 
 typedef enum {
@@ -168,7 +170,7 @@ typedef struct {
 
 // CONSTANTS START ===============================================================================================================
 
-#define FRAME_TIME 8 // ms per frame
+#define FRAME_TIME 200 // ms per frame
 #define TOTAL_FRAMES 15
 #define RESTING 0
 #define PIXEL_PACKAGE_SIZE 8 // amount of pixels per byte. should be 8 unless you've drastically modified other things.
@@ -187,11 +189,11 @@ static const uint8_t AnimationMotionCurveReference[TOTAL_ANIMATION_MOTION_CURVE_
 };
 
 static const uint8_t *const ElementResourceMap[TOTAL_LAYERS][TOTAL_ELEMENTS] = {
-    { resource_win_layer, resource_win_layer, resource_keyboard, resource_win_layer }, //WIN layer
-    { resource_mac_layer, resource_mac_layer, resource_keyboard, resource_win_layer }, //MAC layer
-    { resource_win_layer, resource_win_layer, resource_keyboard, resource_win_layer }, //GAM layer
-    { resource_win_layer, resource_win_layer, resource_keyboard, resource_win_layer }, //COD layer
-    { NULL, resource_win_layer, NULL, NULL }, //FN layer
+    { resource_logo_win, resource_name_win, resource_symbol_keyboard,   resource_mode_mode }, //WIN layer
+    { resource_logo_mac, resource_name_mac, resource_symbol_keyboard,   resource_mode_mode }, //MAC layer
+    { resource_logo_win, resource_name_gam, resource_symbol_controller, resource_mode_mode }, //GAM layer
+    { resource_logo_cod, resource_name_cod, resource_symbol_controller, resource_mode_cod  }, //COD layer
+    { NULL,              NULL,              resource_symbol_keyboard,   resource_mode_fn   }, //FN layer
 };
 
 static const ElementProperties Logo = {
@@ -208,7 +210,7 @@ static const ElementProperties Logo = {
 static const ElementProperties Name = {
     .axis_of_movement            = Y,
     .animation_motion_curve      = LINEAR_16_PIXEL_MOVEMENT,
-    .direction_of_movement       = POSITIVE,
+    .direction_of_movement       = NEGATIVE,
     .bounding_box = {
         .upper_left_coordinates  = { 32, 0 },
         .lower_right_coordinates = { 95, 15 }
@@ -219,7 +221,7 @@ static const ElementProperties Name = {
 static const ElementProperties LayerSymbol = {
     .axis_of_movement            = X,
     .animation_motion_curve      = EXPONENTIAL_31_PIXEL_MOVEMENT,
-    .direction_of_movement       = NEGATIVE,
+    .direction_of_movement       = POSITIVE,
     .bounding_box = {
         .upper_left_coordinates  = { 96, 0 },
         .lower_right_coordinates = { 123, 31 }
@@ -297,14 +299,14 @@ static uint8_t get_frame_offset_in_pixels(const AnimationMotionCurveType curve_t
     return AnimationMotionCurveReference[curve_type][frame];
 }
 
-void get_target_start_position(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
+void get_target_start_position(int16_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
     const uint8_t *target_upper_left = boundaries->upper_left_coordinates;
     const Axis static_axis = movement_axis == X ? Y : X;
 
     output[static_axis] = target_upper_left[static_axis];
     output[movement_axis] = target_upper_left[movement_axis];
 
-    output[movement_axis] += direction == POSITIVE ? frame_pixel_offset : 0;
+    output[movement_axis] += direction == POSITIVE ? frame_pixel_offset : -(int16_t)frame_pixel_offset;
 
     return;
 }
@@ -312,18 +314,21 @@ void get_target_start_position(uint8_t *const output, const Axis movement_axis, 
 void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
     const uint8_t* target_lower_right = boundaries->lower_right_coordinates;
     const uint8_t* target_upper_left = boundaries->upper_left_coordinates;
-    const Axis static_axis = movement_axis == X ? Y : X;
+/*     const Axis static_axis = movement_axis == X ? Y : X;
 
     output[static_axis] = target_lower_right[static_axis] - target_upper_left[static_axis];
 
-    output[movement_axis] = direction == POSITIVE
+    output[movement_axis] = direction == 1 + (NEGATIVE
         ? target_lower_right[movement_axis] - target_upper_left[movement_axis] - frame_pixel_offset
-        : frame_pixel_offset;
+        : frame_pixel_offset); */
+
+    output[X] = target_lower_right[X] - target_upper_left[X] + 1;
+    output[Y] = target_lower_right[Y] - target_upper_left[Y] + 1;
 
     return;
 }
 
-void get_source_start_position(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
+/* void get_source_start_position(int16_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
     const uint8_t* source_upper_left = boundaries->upper_left_coordinates;
     const Axis static_axis = movement_axis == X ? Y : X;
 
@@ -333,7 +338,7 @@ void get_source_start_position(uint8_t *const output, const Axis movement_axis, 
     output[movement_axis] += direction == NEGATIVE ? frame_pixel_offset : 0;
 
     return;
-}
+} */
 
 /**
  * @param[out] target_start_position[2] zero-based index of pixel where drawing should begin
@@ -344,14 +349,13 @@ void get_source_start_position(uint8_t *const output, const Axis movement_axis, 
  * @param      frame_offset_in_pixels   the amount of pixels from the resting position of the
  *                                          element
 */
-void get_draw_information(uint8_t *const target_start_position, uint8_t *const target_fill_area, uint8_t *const source_start_position, const ElementProperties *const properties, uint8_t frame_offset_in_pixels) {
+void get_draw_information(int16_t *const target_start_position, uint8_t *const target_fill_area, const ElementProperties *const properties, uint8_t frame_offset_in_pixels) {
     const DirectionOfMovement direction = properties->direction_of_movement;
     const BoundingBox boundaries = properties->bounding_box;
     const Axis movement_axis = properties->axis_of_movement;
 
     get_target_start_position(target_start_position, movement_axis, frame_offset_in_pixels, direction, &boundaries);
     get_target_fill_area(target_fill_area, movement_axis, frame_offset_in_pixels, direction, &boundaries);
-    get_source_start_position(source_start_position, movement_axis, frame_offset_in_pixels, direction, &boundaries);
 
     return;
 }
@@ -361,34 +365,45 @@ void handle_slide_animation_common(const ElementList element, const uint8_t fram
     const uint8_t frame_offset_in_pixels = get_frame_offset_in_pixels(properties.animation_motion_curve, frame);
     const uint8_t *source = ElementResourceMap[active_layer][element];
 
-    uint8_t screen_start_position[2], total_fill_area[2], element_source_start_position[2];
-    get_draw_information(screen_start_position, total_fill_area, element_source_start_position, &properties, frame_offset_in_pixels);
+    int16_t screen_start_position[2];
+    uint8_t total_fill_area[2];
 
-    gdispGBlitArea(
-        GDISP,
-        screen_start_position[X],
-        screen_start_position[Y],
-        total_fill_area[X],
-        total_fill_area[Y],
-        element_source_start_position[X],
-        element_source_start_position[Y],
-        LCD_WIDTH,
-        (const gPixel*)source
-    );
+    get_draw_information(screen_start_position, total_fill_area, &properties, frame_offset_in_pixels);
+
+    if (element == LOGO) {
+        uprintf("Animating frame: %d\n\
+            screen  x: %d\n\
+            screen  y: %d\n\
+            fill    x: %d\n\
+            fill    y: %d\n",
+            frame,
+            screen_start_position[X],
+            screen_start_position[Y],
+            total_fill_area[X],
+            total_fill_area[Y]
+        );
+    }
+
+    gdispGBlitArea(GDISP, screen_start_position[X], screen_start_position[Y], total_fill_area[X], total_fill_area[Y], 0, 0, total_fill_area[X], (const gPixel*)source);
+}
+
+static uint8_t get_pixel_delta_between_frames(const uint8_t earlier_frame, const uint8_t later_frame, ElementList element) {
+    AnimationMotionCurveType motion_curve_type = get_element_properties(element).animation_motion_curve;
+    const uint8_t* motion_curve = AnimationMotionCurveReference[motion_curve_type];
+    return motion_curve[later_frame] - motion_curve[earlier_frame];
 }
 
 void handle_slide_in_animation(const ElementList element) {
     const uint8_t next_frame = current_state[element].frame - 1;
+    const uint8_t current_frame = current_state[element].frame;
     const uint8_t current_layer = current_state[element].layer;
-    handle_slide_animation_common(element, next_frame, current_layer);
+    const uint8_t pixel_delta = get_pixel_delta_between_frames(next_frame, current_frame, element);
+
+    if (pixel_delta != 0) handle_slide_animation_common(element, next_frame, current_layer);
 
     current_state[element].frame = next_frame;
 }
 
-static uint8_t get_pixel_delta_between_frames(const uint8_t earlier_frame, const uint8_t later_frame, AnimationMotionCurveType motion_curve_type) {
-    const uint8_t* motion_curve = AnimationMotionCurveReference[motion_curve_type];
-    return motion_curve[later_frame] - motion_curve[earlier_frame];
-}
 
 /**
  * @param[out] erase_start_position[2] zero-based index of pixel where erasing should begin
@@ -397,14 +412,15 @@ static uint8_t get_pixel_delta_between_frames(const uint8_t earlier_frame, const
  * @param      element                 the element's enumeration index
 */
 void get_erase_information(uint8_t *const erase_start_position, uint8_t *const erase_fill_area, const uint8_t clean_up_frame, ElementList element) {
-    const ElementProperties properties = get_element_properties(element);
+/*     const ElementProperties properties = get_element_properties(element);
     const Axis movement_axis = properties.axis_of_movement;
     const Axis static_axis   = movement_axis == X ? Y : X;
     const DirectionOfMovement movement_direction = properties.direction_of_movement;
     const uint8_t clean_up_frame_pixel_offset = get_frame_offset_in_pixels(properties.animation_motion_curve, clean_up_frame);
     const uint8_t pixel_delta = get_pixel_delta_between_frames(clean_up_frame - 1, clean_up_frame, properties.animation_motion_curve);
 
-    uint8_t target_start_position[2], target_fill_area[2];
+    int16_t target_start_position[2];
+    uint8_t target_fill_area[2];
 
     get_target_start_position(target_start_position, movement_axis, clean_up_frame_pixel_offset, movement_direction, &(properties.bounding_box));
     get_target_fill_area(target_fill_area, movement_axis, clean_up_frame_pixel_offset, movement_direction, &(properties.bounding_box));
@@ -416,6 +432,22 @@ void get_erase_information(uint8_t *const erase_start_position, uint8_t *const e
         : target_start_position[movement_axis] - pixel_delta;
 
     erase_fill_area[static_axis] = target_fill_area[static_axis];
+    erase_fill_area[movement_axis] = pixel_delta; */
+    const ElementProperties properties = get_element_properties(element);
+    const uint8_t *element_upper_left = properties.bounding_box.upper_left_coordinates;
+    const uint8_t *element_lower_right = properties.bounding_box.lower_right_coordinates;
+    const Axis movement_axis = properties.axis_of_movement;
+    const Axis static_axis   = movement_axis == X ? Y : X;
+    const DirectionOfMovement movement_direction = properties.direction_of_movement;
+    const uint8_t clean_up_frame_pixel_offset = get_frame_offset_in_pixels(properties.animation_motion_curve, clean_up_frame);
+    const uint8_t pixel_delta = get_pixel_delta_between_frames(clean_up_frame - 1, clean_up_frame, properties.animation_motion_curve);
+
+    erase_start_position[static_axis] = element_upper_left[static_axis];
+    erase_start_position[movement_axis] = movement_direction == POSITIVE
+        ? element_upper_left[movement_axis] + clean_up_frame_pixel_offset
+        : element_lower_right[movement_axis] + clean_up_frame_pixel_offset;
+
+    erase_fill_area[static_axis] = element_lower_right[static_axis] - element_upper_left[static_axis] + 1;
     erase_fill_area[movement_axis] = pixel_delta;
 
     return;
@@ -443,13 +475,14 @@ void handle_slide_out_animation(const ElementList element) {
     const uint8_t next_frame = current_frame + 1 > TOTAL_FRAMES
         ? current_frame
         : current_frame + 1;
+    const uint8_t pixel_delta = get_pixel_delta_between_frames(current_frame, next_frame, element);
 
     if (next_frame == current_frame) {
         //technically done with slide-out animation, switching to a slide-in animation
         current_state[element].layer = goal_state[element].layer;
     }
 
-    handle_slide_animation_common(element, next_frame, current_state[element].layer);
+    if (pixel_delta || next_frame == current_frame) handle_slide_animation_common(element, next_frame, current_state[element].layer);
 
     if (current_frame != next_frame) handle_slide_out_clean_up(element, next_frame);
 
@@ -473,6 +506,8 @@ bool animation_routine(keyframe_animation_t* animation, visualizer_state_t* stat
 }
 
 void initialize_my_animation_handler(void) {
+    print("intializing things\n");
+
     for (uint8_t i = 0; i < TOTAL_FRAMES * 2 + 1; i++) {
         current_animation.frame_functions[i] = &animation_routine;
         current_animation.frame_lengths[i] = gfxMillisecondsToTicks(FRAME_TIME);
@@ -605,6 +640,7 @@ void update_goal_states(Layers new_layer) {
  *  (but not backlight)
 */
 void update_my_animation_handler(Layers new_goal_layer) {
+    print("updating animation....\n");
     if (!animation_change_needed(new_goal_layer)) return;
 
     uint8_t total_frames_needed = 0;
