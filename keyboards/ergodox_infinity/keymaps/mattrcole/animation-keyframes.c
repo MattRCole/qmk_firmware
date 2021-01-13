@@ -189,11 +189,16 @@ static const uint8_t AnimationMotionCurveReference[TOTAL_ANIMATION_MOTION_CURVE_
 };
 
 static const uint8_t *const ElementResourceMap[TOTAL_LAYERS][TOTAL_ELEMENTS] = {
+    // { resource_logo_win, resource_name_win, NULL, NULL }, //WIN layer
+    // { resource_logo_mac, resource_name_mac, NULL, NULL }, //MAC layer
+    // { resource_logo_win, resource_name_gam, NULL, NULL }, //GAM layer
+    // { resource_logo_cod, resource_name_cod, NULL, NULL  }, //COD layer
+    // { NULL,              NULL, NULL, NULL   }, //FN layer
     { resource_logo_win, resource_name_win, resource_symbol_keyboard,   resource_mode_mode }, //WIN layer
     { resource_logo_mac, resource_name_mac, resource_symbol_keyboard,   resource_mode_mode }, //MAC layer
     { resource_logo_win, resource_name_gam, resource_symbol_controller, resource_mode_mode }, //GAM layer
     { resource_logo_cod, resource_name_cod, resource_symbol_controller, resource_mode_cod  }, //COD layer
-    { NULL,              NULL,              resource_symbol_keyboard,   resource_mode_fn   }, //FN layer
+    { NULL,              NULL,              resource_symbol_keyboard,   resource_mode_fn   }  //FN layer
 };
 
 static const ElementProperties Logo = {
@@ -299,21 +304,32 @@ static uint8_t get_frame_offset_in_pixels(const AnimationMotionCurveType curve_t
     return AnimationMotionCurveReference[curve_type][frame];
 }
 
-void get_target_start_position(int16_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
-    const uint8_t *target_upper_left = boundaries->upper_left_coordinates;
-    const Axis static_axis = movement_axis == X ? Y : X;
+void get_target_start_position(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
+    output[X] = boundaries->upper_left_coordinates[X];
+    output[Y] = boundaries->upper_left_coordinates[Y];
 
-    output[static_axis] = target_upper_left[static_axis];
-    output[movement_axis] = target_upper_left[movement_axis];
+    if (direction == NEGATIVE) return;
 
-    output[movement_axis] += direction == POSITIVE ? frame_pixel_offset : -(int16_t)frame_pixel_offset;
+    output[movement_axis] += frame_pixel_offset;
 
     return;
 }
 
-void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
-    const uint8_t* target_lower_right = boundaries->lower_right_coordinates;
-    const uint8_t* target_upper_left = boundaries->upper_left_coordinates;
+void get_source_start_position(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
+    output[X] = 0;
+    output[Y] = 0;
+
+    if (direction == POSITIVE) return;
+
+    output[movement_axis] = frame_pixel_offset;
+
+    return;
+}
+
+void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const BoundingBox *const boundaries) {
+/*     const uint8_t* target_lower_right = boundaries->lower_right_coordinates;
+    const uint8_t* target_upper_left = boundaries->upper_left_coordinates; */
+    const Axis static_axis = movement_axis == X ? Y : X;
 /*     const Axis static_axis = movement_axis == X ? Y : X;
 
     output[static_axis] = target_lower_right[static_axis] - target_upper_left[static_axis];
@@ -321,9 +337,16 @@ void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const
     output[movement_axis] = direction == 1 + (NEGATIVE
         ? target_lower_right[movement_axis] - target_upper_left[movement_axis] - frame_pixel_offset
         : frame_pixel_offset); */
+    const uint8_t source_dimensions[2] = { // Remember: fill area is not zero based, it is total pixles
+      boundaries->lower_right_coordinates[X] - boundaries->upper_left_coordinates[X] + 1,
+      boundaries->lower_right_coordinates[Y] - boundaries->upper_left_coordinates[Y] + 1
+    };
 
-    output[X] = target_lower_right[X] - target_upper_left[X] + 1;
-    output[Y] = target_lower_right[Y] - target_upper_left[Y] + 1;
+    output[static_axis] = source_dimensions[static_axis];
+
+    output[movement_axis] = source_dimensions[movement_axis] - frame_pixel_offset;
+    // output[X] = target_lower_right[X] - target_upper_left[X] + 1;
+    // output[Y] = target_lower_right[Y] - target_upper_left[Y] + 1;
 
     return;
 }
@@ -345,19 +368,20 @@ void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const
  * @param[out] target_fill_area[2]      area to fill given as delta x, delta y coordinate pair
  * @param[out] source_start_position[2] zero-based index of pixel where element source picture
  *                                          should start to be drawn from
- * @param      element                  properties of element you are drawing
+ * @param      properties                   properties of element you are drawing
  * @param      frame_offset_in_pixels   the amount of pixels from the resting position of the
  *                                          element
 */
-void get_draw_information(int16_t *const target_start_position, uint8_t *const target_fill_area, const ElementProperties *const properties, uint8_t frame_offset_in_pixels) {
+uint8_t get_draw_information(uint8_t *const target_start_position, uint8_t *const target_fill_area, uint8_t *const source_start_position, const ElementProperties *const properties, uint8_t frame_offset_in_pixels) {
     const DirectionOfMovement direction = properties->direction_of_movement;
     const BoundingBox boundaries = properties->bounding_box;
     const Axis movement_axis = properties->axis_of_movement;
 
     get_target_start_position(target_start_position, movement_axis, frame_offset_in_pixels, direction, &boundaries);
-    get_target_fill_area(target_fill_area, movement_axis, frame_offset_in_pixels, direction, &boundaries);
+    get_target_fill_area(target_fill_area, movement_axis, frame_offset_in_pixels, &boundaries);
+    get_source_start_position(source_start_position, movement_axis, frame_offset_in_pixels, direction, &boundaries);
 
-    return;
+    return boundaries.lower_right_coordinates[X] - boundaries.upper_left_coordinates[X] + 1;
 }
 
 void handle_slide_animation_common(const ElementList element, const uint8_t frame, const Layers active_layer) {
@@ -365,26 +389,44 @@ void handle_slide_animation_common(const ElementList element, const uint8_t fram
     const uint8_t frame_offset_in_pixels = get_frame_offset_in_pixels(properties.animation_motion_curve, frame);
     const uint8_t *source = ElementResourceMap[active_layer][element];
 
-    int16_t screen_start_position[2];
+    uint8_t screen_start_position[2];
     uint8_t total_fill_area[2];
+    uint8_t bitmap_start_position[2];
 
-    get_draw_information(screen_start_position, total_fill_area, &properties, frame_offset_in_pixels);
+    const uint8_t bitmap_row_length =
+      get_draw_information(screen_start_position, total_fill_area, bitmap_start_position, &properties, frame_offset_in_pixels);
 
-    if (element == LOGO) {
+/*     if (element == LAYER_SYMBOL) {
         uprintf("Animating frame: %d\n\
             screen  x: %d\n\
             screen  y: %d\n\
+            bitmap  x: %d\n\
+            bitmap  y: %d\n\
             fill    x: %d\n\
-            fill    y: %d\n",
+            fill    y: %d\n\
+            offset:    %d\n\
+            row len:   %d\n",
             frame,
             screen_start_position[X],
             screen_start_position[Y],
+            bitmap_start_position[X],
+            bitmap_start_position[Y],
             total_fill_area[X],
-            total_fill_area[Y]
+            total_fill_area[Y],
+            frame_offset_in_pixels,
+            bitmap_row_length
         );
-    }
+    } */
 
-    gdispGBlitArea(GDISP, screen_start_position[X], screen_start_position[Y], total_fill_area[X], total_fill_area[Y], 0, 0, total_fill_area[X], (const gPixel*)source);
+    gdispGBlitArea(GDISP,\
+        screen_start_position[X],\
+        screen_start_position[Y],\
+        total_fill_area[X],\
+        total_fill_area[Y],\
+        bitmap_start_position[X],\
+        bitmap_start_position[Y],\
+        bitmap_row_length,\
+        (const gPixel*)source);
 }
 
 static uint8_t get_pixel_delta_between_frames(const uint8_t earlier_frame, const uint8_t later_frame, ElementList element) {
@@ -444,11 +486,11 @@ void get_erase_information(uint8_t *const erase_start_position, uint8_t *const e
 
     erase_start_position[static_axis] = element_upper_left[static_axis];
     erase_start_position[movement_axis] = movement_direction == POSITIVE
-        ? element_upper_left[movement_axis] + clean_up_frame_pixel_offset
-        : element_lower_right[movement_axis] + clean_up_frame_pixel_offset;
+        ? element_upper_left[movement_axis]
+        : element_lower_right[movement_axis] - clean_up_frame_pixel_offset;
 
     erase_fill_area[static_axis] = element_lower_right[static_axis] - element_upper_left[static_axis] + 1;
-    erase_fill_area[movement_axis] = pixel_delta;
+    erase_fill_area[movement_axis] = pixel_delta + 1;
 
     return;
 }
@@ -458,7 +500,17 @@ void handle_slide_out_clean_up(const ElementList element, const uint8_t clean_up
 
     get_erase_information(erase_start_position, erase_fill_area, clean_up_frame, element);
 
-    if(!erase_fill_area[X] || !erase_fill_area[Y]) return;
+    if(erase_fill_area[X] == 0 || erase_fill_area[Y] == 0) return;
+
+/*     uprintf("Sliding out on frame: %d\n\
+        fill x: %d\n\
+        fill y: %d\n\
+        start x: %d\n\
+        start y: %d\n",
+        erase_fill_area[X],
+        erase_fill_area[Y],
+        erase_start_position[X],
+        erase_start_position[Y]); */
 
     gdispGFillArea(
         GDISP,
@@ -627,7 +679,20 @@ static uint8_t get_needed_element_frame_count(const ElementList element, const L
 
 void update_goal_states(Layers new_layer) {
     for (ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
+        if (element == MODE) {
+            uprintf("updating goal states...\n\
+                new layer:     %d\n\
+                current layer: %d\n\
+                new pointer:   %d\n\
+                current pointer: %d\n",
+                new_layer,
+                current_state->layer,
+                (uint32_t)ElementResourceMap[new_layer][element],
+                (uint32_t)ElementResourceMap[current_state->layer][element]);
+        }
+
         if (ElementResourceMap[new_layer][element] == NULL) continue;
+        if (ElementResourceMap[new_layer][element] == ElementResourceMap[current_state->layer][element]) continue;
 
         goal_state[element].layer = new_layer;
     }
