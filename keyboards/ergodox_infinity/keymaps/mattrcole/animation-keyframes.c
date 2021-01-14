@@ -136,10 +136,6 @@ typedef struct {
 } ElementState;
 
 typedef struct {
-    ElementState logo, name, layer_symbol;
-} State;
-
-typedef struct {
     uint8_t upper_left_coordinates[2], lower_right_coordinates[2];
 } BoundingBox;
 
@@ -174,9 +170,6 @@ typedef struct {
 #define TOTAL_FRAMES 15
 #define RESTING 0
 #define PIXEL_PACKAGE_SIZE 8 // amount of pixels per byte. should be 8 unless you've drastically modified other things.
-
-#define LARGEST_PIXEL_DELTA 8 // figure out the most pixels an animation could move in
-#define LARGEST_FILL_DIMENSION 68 // find the element with the largest width or height
 
 static const gColor ScreenEraseColor = White;
 
@@ -229,7 +222,7 @@ static const ElementProperties LayerSymbol = {
     .direction_of_movement       = POSITIVE,
     .bounding_box = {
         .upper_left_coordinates  = { 96, 0 },
-        .lower_right_coordinates = { 123, 31 }
+        .lower_right_coordinates = { 127, 31 }
     },
     .index                       = LAYER_SYMBOL
 };
@@ -274,7 +267,7 @@ static ElementProperties get_element_properties(ElementList element) {
 }
 
 // Checks to see if the current keyframe_animation will be invalidated by the layer change.
-static bool animation_change_needed(Layers goal_layer) {
+/* static bool animation_change_needed(Layers goal_layer) {
     for(ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
         const uint8_t current_layer = current_state[element].layer;
         if (ElementResourceMap[goal_layer][element] == NULL) continue;
@@ -282,7 +275,7 @@ static bool animation_change_needed(Layers goal_layer) {
             return true;
     }
     return false;
-}
+} */
 
 // determines if the goal state for a given element has been met
 static bool element_needs_animation_update(const ElementList element, const Layers goal_layer, const Layers current_layer, const uint8_t current_frame) {
@@ -677,7 +670,7 @@ static uint8_t get_needed_element_frame_count(const ElementList element, const L
     return move_off_of_screen_frames + move_on_screen_frames + resting_frame;
 }
 
-void update_goal_states(Layers new_layer) {
+/* void update_goal_states(Layers new_layer) {
     for (ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
         if (element == MODE) {
             uprintf("updating goal states...\n\
@@ -688,14 +681,57 @@ void update_goal_states(Layers new_layer) {
                 new_layer,
                 current_state->layer,
                 (uint32_t)ElementResourceMap[new_layer][element],
-                (uint32_t)ElementResourceMap[current_state->layer][element]);
+                (uint32_t)ElementResourceMap[current_state[element].layer][element]);
         }
+        if (current_state[element].layer == new_layer) continue;
 
         if (ElementResourceMap[new_layer][element] == NULL) continue;
-        if (ElementResourceMap[new_layer][element] == ElementResourceMap[current_state->layer][element]) continue;
 
         goal_state[element].layer = new_layer;
+
+        if (ElementResourceMap[new_layer][element] == ElementResourceMap[current_state[element].layer][element]) {
+            current_state[element].layer = new_layer;
     }
+
+}
+} */
+
+void update_element_layer_states(const ElementList element, const Layers new_layer) {
+    ElementState *const current = &current_state[element];
+    ElementState *const goal = &goal_state[element];
+    const uint8_t *const new_layer_resource = ElementResourceMap[new_layer][element];
+    const uint8_t *const current_resource = ElementResourceMap[current->layer][element];
+    const uint8_t *const goal_resource = ElementResourceMap[goal->layer][element];
+    if (element == MODE) {
+        uprintf("updating goal states...\n\
+            new layer:     %d\n\
+            current layer: %d\n\
+            goal layer:    %d\n\
+            new pointer:   %d\n\
+            current pointer: %d\n\
+            goal pointer: %d\n",
+            new_layer,
+            current->layer,
+            goal->layer,
+            new_layer_resource,
+            current_resource,
+            goal_resource);
+
+    }
+
+    if (current->layer == new_layer && goal->layer == new_layer) return;
+
+    if (new_layer_resource == NULL) {
+        goal->layer = current->layer;
+        return;
+    }
+
+    goal->layer = new_layer;
+
+    if (current_resource == new_layer_resource) {
+        current->layer = new_layer;
+    }
+
 }
 
 /**
@@ -706,7 +742,7 @@ void update_goal_states(Layers new_layer) {
 */
 void update_my_animation_handler(Layers new_goal_layer) {
     print("updating animation....\n");
-    if (!animation_change_needed(new_goal_layer)) return;
+    // if (!animation_change_needed(new_goal_layer)) return;
 
     uint8_t total_frames_needed = 0;
 
@@ -714,17 +750,17 @@ void update_my_animation_handler(Layers new_goal_layer) {
         const uint8_t current_frame = current_state[element].frame;
         const uint8_t current_layer = current_state[element].layer;
 
-        if (!element_needs_animation_update(element, new_goal_layer, current_layer, current_frame)) continue;
-
+        if (element_needs_animation_update(element, new_goal_layer, current_layer, current_frame)) {
         const uint8_t element_frames_needed = get_needed_element_frame_count(element, current_layer, new_goal_layer, current_frame);
 
         if (element_frames_needed > total_frames_needed) total_frames_needed = element_frames_needed;
     }
+        update_element_layer_states(element, new_goal_layer);
+    }
 
-    if (!total_frames_needed) return;
+    if (total_frames_needed) update_keyframe_animation(total_frames_needed);
 
-    update_keyframe_animation(total_frames_needed);
-    update_goal_states(new_goal_layer);
+    // update_goal_states(new_goal_layer);
 
 }
 
