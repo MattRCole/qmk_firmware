@@ -14,8 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_
-#define QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -34,5 +33,3 @@ extern const uint8_t resource_mode_mode[];
 extern const uint8_t resource_mode_cod[];
 extern const uint8_t resource_mode_fn[];
 #endif
-
-#endif /* QUANTUM_VISUALIZER_RESOURCES_RESOURCES_H_ */
