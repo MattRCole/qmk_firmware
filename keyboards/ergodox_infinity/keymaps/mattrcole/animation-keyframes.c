@@ -1,11 +1,12 @@
 /**
  * Notes on this file:
  *
- * TL;DR Just call animate_elements(Layer layer) whenever
- * a layer change is detected in
+ * TL;DR Just call update_my_animation_handler(Layer layer)
+ * whenever a layer change is detected in
  * update_user_visualizer_state()
  *
- * There's probably a better way of doing this with uGFX.
+ * Most of the following is customizable, but is used as an
+ * example
  *
  * This file divides the 128x32 lcd screen of the keyboard
  * into 4 sections.
@@ -31,50 +32,33 @@
  * |              |                            |             |
  * `---------------------------------------------------------'
  *
- * NOTE: If you want to modify these sections, it is entirely
- * possible to do so. You will just have to understand my
- * crappy code. This is an effort to document said crappy
- * code.
  *
- * ALSO NOTE: It's assumed that each element source (aka
- * picture) is the same width as the LCD screen. crappy
- * assumption, I know, but it works.
+ * NOTE: It's assumed that each element source (aka
+ * picture) spans only the area that it occupies on-screen
  *
- * An element, in this file only, means a section of a picture
- *  that corresponds with a portion of the screen.
+ * An element, for our purposes, means a list of specifications
+ *  that defines how a portion of the screen will be animated.
  *      For example, you love playing dwarf fortress and have
- *      made a layout with macros designed for dwarf fortress
- *      The "logo" element that could correspond to that layer
- *      would be, for example, a picture of the game's symbol
- *      of a dwarf. Every time you switched to that layer, the
- *      dwarf symbol would slide into place (after whatever
- *      logo element that was previously there left the
- *      screen)
- * Each element must have a corresponding pictrue file in the
- * format discribed in
+ *      made a keyboard layer (layout) with macros designed for
+ *      dwarf fortress. Assuming that you're using the
+ *      defaults, you could create a bitmap of the dwarf symbol
+ *      from Dwarf Fortress and assign that bitmap to the logo
+ *      element's resource for that keyboard layer. Every time
+ *      the Dwarf Fortress layer was active, the dwarf Bitmap
+ *      would slide onto screen.
+ * Each element will have a list of bitmap references that
+ *  correspond to every given keyboard layer. If the bitmap
+ *  reference is NULL, this means that activating that layer
+ *  will not animate that specific element, rather, it will
+ *  leave the previous element bitmap on screen.
+ * Element bitmaps must follow the format discribed in
  * "<root>/quantum/visualizer/resources/lcd_logo.c".
  *
- * An element's picture must span the full 128x32 pixel area,
- * this means that you can have 1 picture of the final resting
- * state of the screen for a given layer, and re-use that
- * picture for the logo, name and layer_symbol elements of
- * that layer.
+ * Several elements can be moving at once during a layer
+ *  change. with each element's movement being independent of
+ *  all other on-screen elements.
  *
- * This file will generate, at a maximum, a 15 frame animation
- * for any given element.
- *
- * This means that, if any 1 area needs
- * a complete element change (element x at rest to element y
- * at rest), a 31 frame keyframe_animation_t struct will be
- * generated:
- *      15 for element x removal,
- *      15 for element y insertion
- *      1  for the resting state of the screen
- *
- * Several elements can be moving at once during an animation
- *
- * Each element's movement is independent of all other
- * on-screen elements.
+ * Animations will only be triggered on a layer change.
  *
  * Element animations will be fluid. No element will ever
  * magically "jump" into frame.
@@ -88,24 +72,11 @@
  * (start|stop)_animation will be handled in this file.
 */
 
-// CODING HELP START =============================================================================================================
-
-// these things should be toggled off during the build step. Honestly, this whole block should be removed before I upload this to
-// github or something
-
-// #define LCD_WIDTH 128
-// #define LCD_HEIGHT 32
-// #define LCD_ENABLE
-
-// CODING HELP STOP ==============================================================================================================
-
 #include "animation-keyframes.h"
 #include "stdint.h"
 #include "resources/resources.h"
 #include "visualizer.h"
 #include "layers.h"
-
-#include "print.h"
 
 // ENUM START ====================================================================================================================
 
@@ -142,16 +113,18 @@ typedef struct {
 /**
  * ElementProperties
  *
- * element: Enum value of element
- * axis_of_movement: animation will move Element
- * animation_motion_curve: How the element enters and exits the screen
- *      corresponds to AnimationMotionCurveReference where the index
- *      is ElementState.frame
+ * element: corresponding ElementList enum value of element
+ * axis_of_movement: Either X or Y. If the animation is up or down,
+ *      the value would be Y, left or right would be X
+ * animation_motion_curve: the AnimationMotionCurveReference that
+ *      the animation of the element should follow (read
+ *      AnimationMotionCurveReference comments for more details)
  * direction_of_movement: direction of movement from rest position,
  *      negative if element moves left or up,
  *      positive if element moves right or down
- * bounding_box: zero-based coordinates of Element's total on-screen
- *      area.
+ * bounding_box: zero-based coordinates of Element's boundary
+ *      corners on the LCD screen.
+ *
 */
 typedef struct {
     ElementList              element;
@@ -159,14 +132,13 @@ typedef struct {
     AnimationMotionCurveType animation_motion_curve;
     DirectionOfMovement      direction_of_movement;
     BoundingBox              bounding_box;
-    ElementList              index;
 } ElementProperties;
 
 // STRUCT STOP ===================================================================================================================
 
 // CONSTANTS START ===============================================================================================================
 
-#define FRAME_TIME 200 // ms per frame
+#define FRAME_TIME 20 // ms per frame
 #define TOTAL_FRAMES 15
 #define RESTING 0
 #define PIXEL_PACKAGE_SIZE 8 // amount of pixels per byte. should be 8 unless you've drastically modified other things.
@@ -182,11 +154,6 @@ static const uint8_t AnimationMotionCurveReference[TOTAL_ANIMATION_MOTION_CURVE_
 };
 
 static const uint8_t *const ElementResourceMap[TOTAL_LAYERS][TOTAL_ELEMENTS] = {
-    // { resource_logo_win, resource_name_win, NULL, NULL }, //WIN layer
-    // { resource_logo_mac, resource_name_mac, NULL, NULL }, //MAC layer
-    // { resource_logo_win, resource_name_gam, NULL, NULL }, //GAM layer
-    // { resource_logo_cod, resource_name_cod, NULL, NULL  }, //COD layer
-    // { NULL,              NULL, NULL, NULL   }, //FN layer
     { resource_logo_win, resource_name_win, resource_symbol_keyboard,   resource_mode_mode }, //WIN layer
     { resource_logo_mac, resource_name_mac, resource_symbol_keyboard,   resource_mode_mode }, //MAC layer
     { resource_logo_win, resource_name_gam, resource_symbol_controller, resource_mode_mode }, //GAM layer
@@ -194,48 +161,47 @@ static const uint8_t *const ElementResourceMap[TOTAL_LAYERS][TOTAL_ELEMENTS] = {
     { NULL,              NULL,              resource_symbol_keyboard,   resource_mode_fn   }  //FN layer
 };
 
-static const ElementProperties Logo = {
-    .axis_of_movement            = X,
-    .animation_motion_curve      = EXPONENTIAL_31_PIXEL_MOVEMENT,
-    .direction_of_movement       = NEGATIVE,
-    .bounding_box = {
-        .upper_left_coordinates  = { 0, 0 },
-        .lower_right_coordinates = { 31, 31 }
+static const ElementProperties ElementPropertiesList[] = {
+    {
+        .axis_of_movement            = X,
+        .animation_motion_curve      = EXPONENTIAL_31_PIXEL_MOVEMENT,
+        .direction_of_movement       = NEGATIVE,
+        .bounding_box = {
+            .upper_left_coordinates  = { 0, 0 },
+            .lower_right_coordinates = { 31, 31 }
+        },
+        .element                       = LOGO
     },
-    .index                       = LOGO
-};
-
-static const ElementProperties Name = {
-    .axis_of_movement            = Y,
-    .animation_motion_curve      = LINEAR_16_PIXEL_MOVEMENT,
-    .direction_of_movement       = NEGATIVE,
-    .bounding_box = {
-        .upper_left_coordinates  = { 32, 0 },
-        .lower_right_coordinates = { 95, 15 }
+    {
+        .axis_of_movement            = Y,
+        .animation_motion_curve      = LINEAR_16_PIXEL_MOVEMENT,
+        .direction_of_movement       = NEGATIVE,
+        .bounding_box = {
+            .upper_left_coordinates  = { 32, 0 },
+            .lower_right_coordinates = { 95, 15 }
+        },
+        .element                       = NAME
     },
-    .index                       = NAME
-};
-
-static const ElementProperties LayerSymbol = {
-    .axis_of_movement            = X,
-    .animation_motion_curve      = EXPONENTIAL_31_PIXEL_MOVEMENT,
-    .direction_of_movement       = POSITIVE,
-    .bounding_box = {
-        .upper_left_coordinates  = { 96, 0 },
-        .lower_right_coordinates = { 127, 31 }
+    {
+        .axis_of_movement            = X,
+        .animation_motion_curve      = EXPONENTIAL_31_PIXEL_MOVEMENT,
+        .direction_of_movement       = POSITIVE,
+        .bounding_box = {
+            .upper_left_coordinates  = { 96, 0 },
+            .lower_right_coordinates = { 127, 31 }
+        },
+        .element                       = LAYER_SYMBOL
     },
-    .index                       = LAYER_SYMBOL
-};
-
-static const ElementProperties Mode = {
-    .axis_of_movement            = Y,
-    .animation_motion_curve      = LINEAR_16_PIXEL_MOVEMENT,
-    .direction_of_movement       = POSITIVE,
-    .bounding_box = {
-        .upper_left_coordinates  = { 32, 16 },
-        .lower_right_coordinates = { 95, 31 },
-    },
-    .index                       = MODE
+    {
+        .axis_of_movement            = Y,
+        .animation_motion_curve      = LINEAR_16_PIXEL_MOVEMENT,
+        .direction_of_movement       = POSITIVE,
+        .bounding_box = {
+            .upper_left_coordinates  = { 32, 16 },
+            .lower_right_coordinates = { 95, 31 },
+        },
+        .element                       = MODE
+    }
 };
 
 // CONSTANTS STOP ================================================================================================================
@@ -248,11 +214,16 @@ static keyframe_animation_t current_animation = {
 
 static ElementState current_state[TOTAL_ELEMENTS], goal_state[TOTAL_ELEMENTS];
 
-static bool first_animation_call = true;
-
 // MUTABLE GLOBAL STOP ==========================================================================================================
 
 static ElementProperties get_element_properties(ElementList element) {
+    for(uint8_t i = 0; i < TOTAL_ELEMENTS; i++) {
+        if (ElementPropertiesList[i].element == element) return ElementPropertiesList[i];
+    }
+    return (ElementProperties){};
+}
+
+/* static ElementProperties get_element_properties(ElementList element) {
     switch (element) {
         case LOGO:
             return Logo;
@@ -264,17 +235,6 @@ static ElementProperties get_element_properties(ElementList element) {
         default:
             return Mode;
     }
-}
-
-// Checks to see if the current keyframe_animation will be invalidated by the layer change.
-/* static bool animation_change_needed(Layers goal_layer) {
-    for(ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
-        const uint8_t current_layer = current_state[element].layer;
-        if (ElementResourceMap[goal_layer][element] == NULL) continue;
-        if (ElementResourceMap[goal_layer][element] != ElementResourceMap[current_layer][element])
-            return true;
-    }
-    return false;
 } */
 
 // determines if the goal state for a given element has been met
@@ -320,16 +280,8 @@ void get_source_start_position(uint8_t *const output, const Axis movement_axis, 
 }
 
 void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const BoundingBox *const boundaries) {
-/*     const uint8_t* target_lower_right = boundaries->lower_right_coordinates;
-    const uint8_t* target_upper_left = boundaries->upper_left_coordinates; */
     const Axis static_axis = movement_axis == X ? Y : X;
-/*     const Axis static_axis = movement_axis == X ? Y : X;
 
-    output[static_axis] = target_lower_right[static_axis] - target_upper_left[static_axis];
-
-    output[movement_axis] = direction == 1 + (NEGATIVE
-        ? target_lower_right[movement_axis] - target_upper_left[movement_axis] - frame_pixel_offset
-        : frame_pixel_offset); */
     const uint8_t source_dimensions[2] = { // Remember: fill area is not zero based, it is total pixles
       boundaries->lower_right_coordinates[X] - boundaries->upper_left_coordinates[X] + 1,
       boundaries->lower_right_coordinates[Y] - boundaries->upper_left_coordinates[Y] + 1
@@ -338,23 +290,9 @@ void get_target_fill_area(uint8_t *const output, const Axis movement_axis, const
     output[static_axis] = source_dimensions[static_axis];
 
     output[movement_axis] = source_dimensions[movement_axis] - frame_pixel_offset;
-    // output[X] = target_lower_right[X] - target_upper_left[X] + 1;
-    // output[Y] = target_lower_right[Y] - target_upper_left[Y] + 1;
 
     return;
 }
-
-/* void get_source_start_position(int16_t *const output, const Axis movement_axis, const uint8_t frame_pixel_offset, const DirectionOfMovement direction, const BoundingBox *const boundaries) {
-    const uint8_t* source_upper_left = boundaries->upper_left_coordinates;
-    const Axis static_axis = movement_axis == X ? Y : X;
-
-    output[static_axis] = source_upper_left[static_axis];
-    output[movement_axis] = source_upper_left[movement_axis];
-
-    output[movement_axis] += direction == NEGATIVE ? frame_pixel_offset : 0;
-
-    return;
-} */
 
 /**
  * @param[out] target_start_position[2] zero-based index of pixel where drawing should begin
@@ -389,27 +327,6 @@ void handle_slide_animation_common(const ElementList element, const uint8_t fram
     const uint8_t bitmap_row_length =
       get_draw_information(screen_start_position, total_fill_area, bitmap_start_position, &properties, frame_offset_in_pixels);
 
-/*     if (element == LAYER_SYMBOL) {
-        uprintf("Animating frame: %d\n\
-            screen  x: %d\n\
-            screen  y: %d\n\
-            bitmap  x: %d\n\
-            bitmap  y: %d\n\
-            fill    x: %d\n\
-            fill    y: %d\n\
-            offset:    %d\n\
-            row len:   %d\n",
-            frame,
-            screen_start_position[X],
-            screen_start_position[Y],
-            bitmap_start_position[X],
-            bitmap_start_position[Y],
-            total_fill_area[X],
-            total_fill_area[Y],
-            frame_offset_in_pixels,
-            bitmap_row_length
-        );
-    } */
 
     gdispGBlitArea(GDISP,\
         screen_start_position[X],\
@@ -447,27 +364,6 @@ void handle_slide_in_animation(const ElementList element) {
  * @param      element                 the element's enumeration index
 */
 void get_erase_information(uint8_t *const erase_start_position, uint8_t *const erase_fill_area, const uint8_t clean_up_frame, ElementList element) {
-/*     const ElementProperties properties = get_element_properties(element);
-    const Axis movement_axis = properties.axis_of_movement;
-    const Axis static_axis   = movement_axis == X ? Y : X;
-    const DirectionOfMovement movement_direction = properties.direction_of_movement;
-    const uint8_t clean_up_frame_pixel_offset = get_frame_offset_in_pixels(properties.animation_motion_curve, clean_up_frame);
-    const uint8_t pixel_delta = get_pixel_delta_between_frames(clean_up_frame - 1, clean_up_frame, properties.animation_motion_curve);
-
-    int16_t target_start_position[2];
-    uint8_t target_fill_area[2];
-
-    get_target_start_position(target_start_position, movement_axis, clean_up_frame_pixel_offset, movement_direction, &(properties.bounding_box));
-    get_target_fill_area(target_fill_area, movement_axis, clean_up_frame_pixel_offset, movement_direction, &(properties.bounding_box));
-
-
-    erase_start_position[static_axis] = target_start_position[static_axis];
-    erase_start_position[movement_axis] = movement_direction == NEGATIVE
-        ? target_start_position[movement_axis] + target_fill_area[movement_axis]
-        : target_start_position[movement_axis] - pixel_delta;
-
-    erase_fill_area[static_axis] = target_fill_area[static_axis];
-    erase_fill_area[movement_axis] = pixel_delta; */
     const ElementProperties properties = get_element_properties(element);
     const uint8_t *element_upper_left = properties.bounding_box.upper_left_coordinates;
     const uint8_t *element_lower_right = properties.bounding_box.lower_right_coordinates;
@@ -495,16 +391,6 @@ void handle_slide_out_clean_up(const ElementList element, const uint8_t clean_up
 
     if(erase_fill_area[X] == 0 || erase_fill_area[Y] == 0) return;
 
-/*     uprintf("Sliding out on frame: %d\n\
-        fill x: %d\n\
-        fill y: %d\n\
-        start x: %d\n\
-        start y: %d\n",
-        erase_fill_area[X],
-        erase_fill_area[Y],
-        erase_start_position[X],
-        erase_start_position[Y]); */
-
     gdispGFillArea(
         GDISP,
         erase_start_position[X],
@@ -523,7 +409,7 @@ void handle_slide_out_animation(const ElementList element) {
     const uint8_t pixel_delta = get_pixel_delta_between_frames(current_frame, next_frame, element);
 
     if (next_frame == current_frame) {
-        //technically done with slide-out animation, switching to a slide-in animation
+        //technically done with the slide-out animation, switching to a slide-in animation
         current_state[element].layer = goal_state[element].layer;
     }
 
@@ -535,11 +421,6 @@ void handle_slide_out_animation(const ElementList element) {
 }
 
 bool animation_routine(keyframe_animation_t* animation, visualizer_state_t* state) {
-    if (first_animation_call) {
-        gdispGClear(GDISP, ScreenEraseColor);
-        first_animation_call = false;
-    }
-
     for(ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
         if (!element_needs_animation_update(element, goal_state[element].layer, current_state[element].layer, current_state[element].frame)) continue;
 
@@ -550,101 +431,36 @@ bool animation_routine(keyframe_animation_t* animation, visualizer_state_t* stat
     return false;
 }
 
-void initialize_my_animation_handler(void) {
-    print("intializing things\n");
-
+void initialize_my_animation_handler(Layers layer) {
     for (uint8_t i = 0; i < TOTAL_FRAMES * 2 + 1; i++) {
         current_animation.frame_functions[i] = &animation_routine;
         current_animation.frame_lengths[i] = gfxMillisecondsToTicks(FRAME_TIME);
     }
 
-    Layers layer_to_animate = 0;
-    uint8_t frames_needed = 0;
-
-    for(Layers layer = 0; layer < TOTAL_LAYERS; layer++) {
-        for(ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
-            if (ElementResourceMap[layer][element]) {
-                layer_to_animate = layer;
-                frames_needed = TOTAL_FRAMES + 1;
-                goto layer_found;
-            }
-        }
-    }
-layer_found:
+    const uint8_t frames_needed = TOTAL_FRAMES + 1;
+    bool animation_needed = false;
 
     for(ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
-        goal_state[element].layer = current_state[element].layer = layer_to_animate;
+        goal_state[element].layer = current_state[element].layer = layer;
         goal_state[element].frame = RESTING;
 
-        current_state[element].frame = ElementResourceMap[layer_to_animate][element] == NULL
-            ? RESTING
-            : TOTAL_FRAMES;
-    }
+        current_state[element].frame = RESTING;
 
-    current_animation.num_frames = frames_needed;
-
-    start_keyframe_animation(&current_animation);
-}
-
-/* static uint8_t project_coords_onto_line(const uint8_t x, const uint8_t y, const uint8_t row_width) { return x + (y * row_width); }
-
-static uint8_t get_bit(const uint8_t byte, const uint8_t bit_index) { return ((1 << bit_index) & byte) == 0 ? 0 : 1; }
-
-static uint8_t insert_bit(const uint8_t byte, const uint8_t bit_index, const uint8_t bit_value) { return bit_value ? byte | (1 << bit_index) : byte & ~(1 << bit_index); }
-
-static uint8_t get_pixel_offset_from_frame(const Axis offset_axis, const ElementProperties *element_properties, const uint8_t frame) {
-
-}
-
-static uint8_t get_source_pixel_offset(const Axis offset_axis, const ElementProperties *element_properties, const ElementState *element_state) {
-    return offset_axis != element_properties->axis_of_movement
-        ? element_properties->bounding_box.upper_left_coordinates[offset_axis]
-        : get_pixel_offset_from_frame(offset_axis, element_properties, element_state->frame);
-} */
-
-/* void paste_image_on_image(
-    const uint8_t *source,
-    uint8_t *target,
-    const ElementList element,
-    const ElementState* element_state
-    ) {
-    const ElementProperties element_properties = get_element_properties(element);
-    const BoundingBox *bounds = &(element_properties.bounding_box);
-
-    const uint8_t source_x_offset = get_source_pixel_offset(X, &element_properties, element_state);
-    const uint8_t source_y_offset = get_source_pixel_offset(Y, &element_properties, element_state);
-
-    const uint8_t x_offset  = bounds->upper_left_coordinates[X];
-    const uint8_t y_offset  = bounds->upper_left_coordinates[Y];
-
-    const uint8_t x_range  = bounds->lower_right_coordinates[X] - source_x_offset;
-    const uint8_t y_range  = bounds->lower_right_coordinates[Y] - source_y_offset;
-
-    for (uint8_t j = 0; j <= y_range; j++) {
-        for (uint8_t i = 0; i <= x_range; i++) {
-            const uint8_t x = x_offset + i;
-            const uint8_t y = y_offset + j;
-
-            const uint8_t source_x = i + source_area.x0;
-            const uint8_t source_y = j + source_area.y0;
-
-            const uint8_t target_pixel     = project_coords_onto_line(x, y, target_row_len);
-            const uint8_t target_index     = target_pixel / PIXEL_PACKAGE_SIZE;
-            const uint8_t target_bit_index = target_pixel % PIXEL_PACKAGE_SIZE;
-            const uint8_t target_byte      = target[target_index];
-
-            const uint8_t source_pixel     = project_coords_onto_line(source_x, source_y, source_row_len);
-            const uint8_t source_index     = source_pixel / PIXEL_PACKAGE_SIZE;
-            const uint8_t source_bit_index = source_pixel % PIXEL_PACKAGE_SIZE;
-            const uint8_t source_byte      = source[source_index];
-            const uint8_t source_bit       = get_bit(source_byte, source_bit_index);
-
-            const uint8_t byte_to_insert = insert_bit(target_byte, target_bit_index, source_bit);
-
-            target[target_index] = byte_to_insert;
+        if (ElementResourceMap[layer][element] != NULL ) {
+            current_state[element].frame = TOTAL_FRAMES;
+            animation_needed = true;
         }
+
     }
-} */
+
+    gdispGClear(GDISP, ScreenEraseColor);
+
+    if (animation_needed) {
+        current_animation.num_frames = frames_needed;
+
+        start_keyframe_animation(&current_animation);
+    }
+}
 
 void update_keyframe_animation(uint8_t needed_frames) {
     stop_keyframe_animation(&current_animation);
@@ -670,54 +486,11 @@ static uint8_t get_needed_element_frame_count(const ElementList element, const L
     return move_off_of_screen_frames + move_on_screen_frames + resting_frame;
 }
 
-/* void update_goal_states(Layers new_layer) {
-    for (ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
-        if (element == MODE) {
-            uprintf("updating goal states...\n\
-                new layer:     %d\n\
-                current layer: %d\n\
-                new pointer:   %d\n\
-                current pointer: %d\n",
-                new_layer,
-                current_state->layer,
-                (uint32_t)ElementResourceMap[new_layer][element],
-                (uint32_t)ElementResourceMap[current_state[element].layer][element]);
-        }
-        if (current_state[element].layer == new_layer) continue;
-
-        if (ElementResourceMap[new_layer][element] == NULL) continue;
-
-        goal_state[element].layer = new_layer;
-
-        if (ElementResourceMap[new_layer][element] == ElementResourceMap[current_state[element].layer][element]) {
-            current_state[element].layer = new_layer;
-    }
-
-}
-} */
-
 void update_element_layer_states(const ElementList element, const Layers new_layer) {
     ElementState *const current = &current_state[element];
     ElementState *const goal = &goal_state[element];
     const uint8_t *const new_layer_resource = ElementResourceMap[new_layer][element];
     const uint8_t *const current_resource = ElementResourceMap[current->layer][element];
-    const uint8_t *const goal_resource = ElementResourceMap[goal->layer][element];
-    if (element == MODE) {
-        uprintf("updating goal states...\n\
-            new layer:     %d\n\
-            current layer: %d\n\
-            goal layer:    %d\n\
-            new pointer:   %d\n\
-            current pointer: %d\n\
-            goal pointer: %d\n",
-            new_layer,
-            current->layer,
-            goal->layer,
-            new_layer_resource,
-            current_resource,
-            goal_resource);
-
-    }
 
     if (current->layer == new_layer && goal->layer == new_layer) return;
 
@@ -741,9 +514,6 @@ void update_element_layer_states(const ElementList element, const Layers new_lay
  *  (but not backlight)
 */
 void update_my_animation_handler(Layers new_goal_layer) {
-    print("updating animation....\n");
-    // if (!animation_change_needed(new_goal_layer)) return;
-
     uint8_t total_frames_needed = 0;
 
     for (ElementList element = 0; element < TOTAL_ELEMENTS; element++) {
@@ -751,17 +521,15 @@ void update_my_animation_handler(Layers new_goal_layer) {
         const uint8_t current_layer = current_state[element].layer;
 
         if (element_needs_animation_update(element, new_goal_layer, current_layer, current_frame)) {
-        const uint8_t element_frames_needed = get_needed_element_frame_count(element, current_layer, new_goal_layer, current_frame);
+            const uint8_t element_frames_needed = get_needed_element_frame_count(element, current_layer, new_goal_layer, current_frame);
 
-        if (element_frames_needed > total_frames_needed) total_frames_needed = element_frames_needed;
-    }
+            if (element_frames_needed > total_frames_needed) total_frames_needed = element_frames_needed;
+        }
+
         update_element_layer_states(element, new_goal_layer);
     }
 
     if (total_frames_needed) update_keyframe_animation(total_frames_needed);
-
-    // update_goal_states(new_goal_layer);
-
 }
 
 #undef PIXEL_PACKAGE_SIZE
